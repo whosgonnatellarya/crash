@@ -2,6 +2,7 @@ import PartyCard from "@/components/partycard";
 import { FlatList, View, Text, TouchableOpacity} from "react-native";
 import { useState } from 'react'; 
 
+//this is basically the homescreen!!
 export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState('hot')
   const parties = [
