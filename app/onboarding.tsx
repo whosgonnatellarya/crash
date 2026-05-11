@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { Text, TouchableOpacity, View } from "react-native";
 
 export default function Onboarding() {
@@ -10,7 +11,6 @@ export default function Onboarding() {
         padding: 24,
       }}
     >
-      <Text style={{ fontSize: 64, marginBottom: 16 }}>🎉</Text>
       <Text style={{ fontSize: 48, fontWeight: "bold", marginBottom: 8 }}>
         crash
       </Text>
@@ -34,7 +34,7 @@ export default function Onboarding() {
           alignItems: "center",
           marginBottom: 12,
         }}
-        onPress={() => {}}
+        onPress={() => router.push("/auth/signup")}
       >
         <Text style={{ color: "white", fontWeight: "bold", fontSize: 16 }}>
           get started
@@ -49,7 +49,7 @@ export default function Onboarding() {
           borderRadius: 12,
           alignItems: "center",
         }}
-        onPress={() => {}}
+        onPress={() => router.push("/auth/login")}
       >
         <Text style={{ fontWeight: "bold", fontSize: 16 }}>log in</Text>
       </TouchableOpacity>
