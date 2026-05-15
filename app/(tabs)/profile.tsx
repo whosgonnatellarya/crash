@@ -1,6 +1,7 @@
-import { supabase } from "@/lib/supabase";
+import { getPublicUser, supabase } from "@/lib/supabase";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
@@ -10,16 +11,18 @@ export default function Profile() {
 
   useEffect(() => {
     async function fetchProfile() {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) return;
+      const user = await getPublicUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-      const [profileRes, attendedRes, hostedRes] = await Promise.all([
-        supabase.from("users").select("*").eq("id", user.id).single(),
+      const [attendedRes, hostedRes] = await Promise.all([
         supabase.from("requests").select("id", { count: "exact" }).eq("user_id", user.id).eq("status", "approved"),
         supabase.from("parties").select("id", { count: "exact" }).eq("host_id", user.id),
       ]);
 
-      if (profileRes.data) setProfile(profileRes.data);
+      setProfile(user);
       setAttendedCount(attendedRes.count ?? 0);
       setHostedCount(hostedRes.count ?? 0);
       setLoading(false);
@@ -61,6 +64,36 @@ export default function Profile() {
       </View>
 
       <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8 }}>upcoming parties</Text>
+
+      {hostedCount > 0 && (
+        <TouchableOpacity
+          style={{
+            marginTop: 16,
+            padding: 16,
+            backgroundColor: "#000",
+            borderRadius: 12,
+            alignItems: "center",
+          }}
+          onPress={() => router.push("/host-dashboard")}
+        >
+          <Text style={{ color: "white", fontWeight: "bold" }}>host dashboard</Text>
+        </TouchableOpacity>
+      )}
+
+      <TouchableOpacity
+        style={{
+          marginTop: 32,
+          marginBottom: 40,
+          padding: 16,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: "#ff3b30",
+          alignItems: "center",
+        }}
+        onPress={() => supabase.auth.signOut()}
+      >
+        <Text style={{ color: "#ff3b30", fontWeight: "bold" }}>sign out</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }

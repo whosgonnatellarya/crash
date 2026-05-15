@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getPublicUser, supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
@@ -11,8 +11,11 @@ export default function HostDashboard() {
   }, []);
 
   async function fetchRequests() {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) return;
+    const user = await getPublicUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("requests")

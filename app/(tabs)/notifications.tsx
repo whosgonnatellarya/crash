@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getPublicUser, supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 
@@ -23,8 +23,11 @@ export default function Notifications() {
 
   useEffect(() => {
     async function fetchNotifications() {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) return;
+      const user = await getPublicUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       const [attendeeRes, hostRes] = await Promise.all([
         // requests I sent that were approved or denied

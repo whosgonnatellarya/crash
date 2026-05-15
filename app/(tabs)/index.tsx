@@ -1,7 +1,8 @@
 import PartyCard from "@/components/partycard";
 import { supabase } from "@/lib/supabase";
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { FlatList, Text, TouchableOpacity, View } from "react-native";
 
 //this is basically the homescreen!!
@@ -9,19 +10,18 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState("hot");
   const [parties, setParties] = useState([]);
 
-  useEffect(() => {
-    supabase
-      .from("parties")
-      .select("*")
-      .then(({ data, error }) => {
-        console.log("data:", data);
-        console.log("error:", error);
-        if (error) console.log(error);
-        else setParties(data);
-      });
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      supabase
+        .from("parties")
+        .select("*, users!host_id(name)")
+        .then(({ data, error }) => {
+          if (!error) setParties(data);
+        });
+    }, [])
+  );
   return (
-    <View style={{ padding: 16 }}>
+    <View style={{ flex: 1, padding: 16 }}>
       <Text> hey there, name! </Text>
 
       <View style={{ flexDirection: "row" }}>
@@ -65,17 +65,17 @@ export default function HomeScreen() {
 
       <FlatList
         data={parties}
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <TouchableOpacity onPress={() => router.push(`/party/${item.id}`)}>
             <PartyCard
               name={item.name}
-              host={item.host_id}
+              host={item.users?.name ?? "unknown"}
               price={item.price}
               image={item.image_url}
               isPaid={item.is_paid}
               restrictions={item.restrictions}
-              dateTime={new Date(item.date_time).toLocaleDateString()}
+              dateTime={item.date_time}
             />
           </TouchableOpacity>
         )}

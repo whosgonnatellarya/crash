@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getPublicUser, supabase } from "@/lib/supabase";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -17,19 +17,19 @@ export default function GroupChat() {
   const { party_id, party_name } = useLocalSearchParams<{ party_id: string; party_name: string }>();
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = await getPublicUser();
       if (user) setCurrentUserId(user.id);
 
       const { data, error } = await supabase
         .from("messages")
         .select("id, content, created_at, user_id, users(name)")
-        .eq("party_id", party_id)
+        .eq("party_id", parseInt(party_id as string))
         .order("created_at", { ascending: true });
 
       if (error) Alert.alert("error", error.message);
@@ -70,7 +70,7 @@ export default function GroupChat() {
     setText("");
 
     const { error } = await supabase.from("messages").insert({
-      party_id,
+      party_id: parseInt(party_id),
       user_id: currentUserId,
       content: trimmed,
     });

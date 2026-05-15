@@ -12,3 +12,31 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
   },
 })
+
+export async function getPublicUser() {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) return null;
+
+  const { data } = await supabase
+    .from('users')
+    .select('*')
+    .eq('email', user.email)
+    .single();
+
+  if (data) return data;
+
+  // no row yet — create one from auth metadata (handles accounts created before signup fix)
+  const meta = user.user_metadata ?? {};
+  const { data: newUser } = await supabase
+    .from('users')
+    .insert({
+      name: meta.name ?? '',
+      email: user.email,
+      university: meta.university ?? '',
+      graduation_year: meta.graduation_year ?? null,
+    })
+    .select()
+    .single();
+
+  return newUser;
+}

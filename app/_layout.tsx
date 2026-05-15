@@ -27,13 +27,15 @@ export default function RootLayout() {
       }
     });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN") {
         router.replace("/(tabs)");
-      } else {
+      } else if (event === "SIGNED_OUT") {
         router.replace("/onboarding");
       }
     });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
@@ -44,6 +46,8 @@ export default function RootLayout() {
         <Stack.Screen name="auth/login" options={{ headerShown: false }} />
         <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+        <Stack.Screen name="party/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="host-dashboard" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

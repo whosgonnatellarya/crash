@@ -12,19 +12,31 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
 
   async function handleSignup() {
-  setLoading(true);
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { name, university, graduation_year: year }
+    setLoading(true);
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      alert(error.message);
+      setLoading(false);
+      return;
     }
-  });
-  console.log('data:', data);
-  console.log('error:', error);
-  if (error) alert(error.message);
-  setLoading(false);
-}
+
+    const { error: insertError } = await supabase.from("users").insert({
+      name,
+      email,
+      university,
+      graduation_year: year,
+    });
+
+    if (insertError) {
+      alert(insertError.message);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(false);
+    alert("account created! check your email to confirm before logging in.");
+    router.replace("/auth/login");
+  }
 
   return (
     <ScrollView style={{ flex: 1, padding: 24 }}>
@@ -77,9 +89,10 @@ export default function Signup() {
         }}
       />
       <TextInput
-        placeholder="graduation year (e.g. 25)"
+        placeholder="graduation year (e.g. 2027)"
         value={year}
         onChangeText={setYear}
+        keyboardType="numeric"
         style={{
           padding: 16,
           backgroundColor: "#f0f0f0",
