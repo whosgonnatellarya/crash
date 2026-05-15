@@ -1,5 +1,8 @@
+import { supabase } from "@/lib/supabase";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
+  Alert,
   ScrollView,
   Text,
   TextInput,
@@ -8,8 +11,53 @@ import {
 } from "react-native";
 
 export default function CreateParty() {
+  const [name, setName] = useState("");
+  const [dateTime, setDateTime] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+  const [restrictions, setRestrictions] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [isPaid, setIsPaid] = useState(false);
+  const [price, setPrice] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit() {
+    if (!name || !dateTime || !location) {
+      Alert.alert("missing fields", "name, date & time, and location are required.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      Alert.alert("not logged in", "you need to be logged in to create a party.");
+      setLoading(false);
+      return;
+    }
+
+    const { error } = await supabase.from("parties").insert({
+      name,
+      date_time: dateTime,
+      location,
+      description,
+      restrictions,
+      is_public: isPublic,
+      is_paid: isPaid,
+      price: isPaid ? parseFloat(price) || null : null,
+      host_id: user.id,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      Alert.alert("error", error.message);
+    } else {
+      Alert.alert("party created!", "your party is live.", [
+        { text: "ok", onPress: () => router.push("/(tabs)") },
+      ]);
+    }
+  }
 
   return (
     <ScrollView style={{ flex: 1, padding: 24 }}>
@@ -29,6 +77,8 @@ export default function CreateParty() {
 
       <TextInput
         placeholder="party name"
+        value={name}
+        onChangeText={setName}
         style={{
           padding: 16,
           backgroundColor: "#f0f0f0",
@@ -37,7 +87,9 @@ export default function CreateParty() {
         }}
       />
       <TextInput
-        placeholder="date & time"
+        placeholder="date & time (e.g. Fri May 16 10pm)"
+        value={dateTime}
+        onChangeText={setDateTime}
         style={{
           padding: 16,
           backgroundColor: "#f0f0f0",
@@ -47,6 +99,8 @@ export default function CreateParty() {
       />
       <TextInput
         placeholder="location"
+        value={location}
+        onChangeText={setLocation}
         style={{
           padding: 16,
           backgroundColor: "#f0f0f0",
@@ -56,6 +110,8 @@ export default function CreateParty() {
       />
       <TextInput
         placeholder="description"
+        value={description}
+        onChangeText={setDescription}
         multiline
         numberOfLines={4}
         style={{
@@ -68,6 +124,8 @@ export default function CreateParty() {
       />
       <TextInput
         placeholder="restrictions (e.g. 21+, UW/WLU only)"
+        value={restrictions}
+        onChangeText={setRestrictions}
         style={{
           padding: 16,
           backgroundColor: "#f0f0f0",
@@ -129,6 +187,8 @@ export default function CreateParty() {
       {isPaid && (
         <TextInput
           placeholder="price ($)"
+          value={price}
+          onChangeText={setPrice}
           keyboardType="numeric"
           style={{
             padding: 16,
@@ -146,11 +206,13 @@ export default function CreateParty() {
           borderRadius: 12,
           alignItems: "center",
           marginBottom: 40,
+          opacity: loading ? 0.6 : 1,
         }}
-        onPress={() => {}}
+        onPress={handleSubmit}
+        disabled={loading}
       >
         <Text style={{ color: "white", fontWeight: "bold", fontSize: 16 }}>
-          create party
+          {loading ? "creating..." : "create party"}
         </Text>
       </TouchableOpacity>
     </ScrollView>
