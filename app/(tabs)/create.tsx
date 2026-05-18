@@ -1,10 +1,12 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { getPublicUser, supabase } from "@/lib/supabase";
+import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
+  Image,
   Modal,
   Platform,
   ScrollView,
@@ -25,6 +27,7 @@ export default function CreateParty() {
   const [isPublic, setIsPublic] = useState(true);
   const [isPaid, setIsPaid] = useState(false);
   const [price, setPrice] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const dateLabel = date.toLocaleDateString("en-US", {
@@ -42,6 +45,49 @@ export default function CreateParty() {
   function onTimeChange(_: any, selected?: Date) {
     if (Platform.OS === "android") setShowTimePicker(false);
     if (selected) setDate(selected);
+  }
+
+  async function pickImage() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("permission needed", "allow photo access to upload a party image.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setImageUri(result.assets[0].uri);
+    }
+  }
+
+  async function uploadImage(uri: string, userId: string): Promise<string | null> {
+    try {
+      const ext = uri.split(".").pop() ?? "jpg";
+      const path = `${userId}/${Date.now()}.${ext}`;
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+
+      const { error } = await supabase.storage
+        .from("party-images")
+        .upload(path, arrayBuffer, { contentType: `image/${ext}`, upsert: false });
+
+      if (error) {
+        Alert.alert("upload error", error.message);
+        return null;
+      }
+
+      const { data } = supabase.storage.from("party-images").getPublicUrl(path);
+      return data.publicUrl;
+    } catch (e: any) {
+      Alert.alert("upload error", e.message ?? "failed to upload image");
+      return null;
+    }
   }
 
   async function handleSubmit() {
@@ -72,6 +118,15 @@ export default function CreateParty() {
       }
     } catch (_) {}
 
+    let imageUrl: string | null = null;
+    if (imageUri) {
+      imageUrl = await uploadImage(imageUri, user.id);
+      if (!imageUrl) {
+        setLoading(false);
+        return;
+      }
+    }
+
     const { error } = await supabase.from("parties").insert({
       name,
       date_time: date.toISOString(),
@@ -84,6 +139,7 @@ export default function CreateParty() {
       host_id: user.id,
       latitude,
       longitude,
+      image_url: imageUrl,
     });
 
     setLoading(false);
@@ -99,6 +155,7 @@ export default function CreateParty() {
       setIsPublic(true);
       setIsPaid(false);
       setPrice("");
+      setImageUri(null);
       Alert.alert("party created!", "your party is live.", [
         { text: "ok", onPress: () => router.push("/(tabs)") },
       ]);
@@ -140,7 +197,6 @@ export default function CreateParty() {
         </TouchableOpacity>
       </View>
 
-      {/* Android: render inline (shows as native dialog) */}
       {Platform.OS === "android" && showDatePicker && (
         <DateTimePicker value={date} mode="date" onChange={onDateChange} />
       )}
@@ -148,7 +204,6 @@ export default function CreateParty() {
         <DateTimePicker value={date} mode="time" onChange={onTimeChange} />
       )}
 
-      {/* iOS: bottom sheet modal */}
       {Platform.OS === "ios" && showPicker && (
         <Modal transparent animationType="slide">
           <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.3)" }}>
@@ -190,6 +245,32 @@ export default function CreateParty() {
         onChangeText={setRestrictions}
         style={{ padding: 16, backgroundColor: "#f0f0f0", borderRadius: 12, marginBottom: 24 }}
       />
+
+      {/* Image picker */}
+      <Text style={{ fontWeight: "bold", marginBottom: 8 }}>party image</Text>
+      <TouchableOpacity
+        onPress={pickImage}
+        style={{
+          backgroundColor: "#f0f0f0",
+          borderRadius: 12,
+          marginBottom: 24,
+          overflow: "hidden",
+          alignItems: "center",
+          justifyContent: "center",
+          height: imageUri ? undefined : 100,
+        }}
+      >
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={{ width: "100%", height: 180 }} resizeMode="cover" />
+        ) : (
+          <Text style={{ color: "gray" }}>tap to add a photo</Text>
+        )}
+      </TouchableOpacity>
+      {imageUri && (
+        <TouchableOpacity onPress={() => setImageUri(null)} style={{ marginTop: -20, marginBottom: 24, alignItems: "center" }}>
+          <Text style={{ color: "gray", fontSize: 13 }}>remove photo</Text>
+        </TouchableOpacity>
+      )}
 
       <Text style={{ fontWeight: "bold", marginBottom: 8 }}>visibility</Text>
       <View style={{ flexDirection: "row", marginBottom: 24 }}>

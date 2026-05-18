@@ -48,6 +48,9 @@ export default function RootLayout() {
         <Stack.Screen name="modal" options={{ presentation: "modal" }} />
         <Stack.Screen name="party/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="host-dashboard" options={{ headerShown: false }} />
+        <Stack.Screen name="groupchat" options={{ headerShown: false }} />
+        <Stack.Screen name="waitlist" options={{ headerShown: false }} />
+        <Stack.Screen name="qrcode" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
