@@ -13,7 +13,7 @@ export default function PartyDetails() {
   useEffect(() => {
     async function load() {
       const [{ data: partyData, error }, currentUser] = await Promise.all([
-        supabase.from('parties').select('*').eq('id', parseInt(id)).single(),
+        supabase.from('parties').select('*').eq('id', id).single(),
         getPublicUser(),
       ]);
       if (error) Alert.alert('error', error.message);
@@ -36,7 +36,7 @@ export default function PartyDetails() {
     }
 
     const { error } = await supabase.from('requests').insert({
-      party_id: parseInt(id),
+      party_id: id,
       user_id: user.id,
       status: 'pending',
     });
@@ -54,7 +54,18 @@ export default function PartyDetails() {
     );
   }
 
-  if (!party) return null;
+  if (!party) {
+    return (
+      <SafeAreaView style={{ flex: 1 }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ paddingHorizontal: 24, paddingVertical: 12 }}>
+          <Text style={{ fontSize: 16 }}>← back</Text>
+        </TouchableOpacity>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: 'gray' }}>party not found.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1 }}>

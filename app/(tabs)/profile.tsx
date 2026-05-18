@@ -11,21 +11,23 @@ export default function Profile() {
 
   useEffect(() => {
     async function fetchProfile() {
-      const user = await getPublicUser();
-      if (!user) {
+      try {
+        const user = await getPublicUser();
+        if (!user) return;
+
+        const [attendedRes, hostedRes] = await Promise.all([
+          supabase.from("requests").select("id", { count: "exact" }).eq("user_id", user.id).eq("status", "approved"),
+          supabase.from("parties").select("id", { count: "exact" }).eq("host_id", user.id),
+        ]);
+
+        setProfile(user);
+        setAttendedCount(attendedRes.count ?? 0);
+        setHostedCount(hostedRes.count ?? 0);
+      } catch (e) {
+        console.error("fetchProfile error:", e);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const [attendedRes, hostedRes] = await Promise.all([
-        supabase.from("requests").select("id", { count: "exact" }).eq("user_id", user.id).eq("status", "approved"),
-        supabase.from("parties").select("id", { count: "exact" }).eq("host_id", user.id),
-      ]);
-
-      setProfile(user);
-      setAttendedCount(attendedRes.count ?? 0);
-      setHostedCount(hostedRes.count ?? 0);
-      setLoading(false);
     }
 
     fetchProfile();

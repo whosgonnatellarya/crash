@@ -23,11 +23,16 @@ export default function Notifications() {
 
   useEffect(() => {
     async function fetchNotifications() {
+      try {
       const user = await getPublicUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+      if (!user) return;
+
+      const { data: myParties } = await supabase
+        .from("parties")
+        .select("id, name")
+        .eq("host_id", user.id);
+
+      const myPartyIds = (myParties ?? []).map((p: any) => p.id);
 
       const [attendeeRes, hostRes] = await Promise.all([
         // requests I sent that were approved or denied
@@ -39,12 +44,14 @@ export default function Notifications() {
           .order("created_at", { ascending: false }),
 
         // pending requests to parties I host
-        supabase
-          .from("requests")
-          .select("id, status, created_at, users(name), parties!inner(name, host_id)")
-          .eq("parties.host_id", user.id)
-          .eq("status", "pending")
-          .order("created_at", { ascending: false }),
+        myPartyIds.length > 0
+          ? supabase
+              .from("requests")
+              .select("id, status, created_at, users(name), parties(name)")
+              .in("party_id", myPartyIds)
+              .eq("status", "pending")
+              .order("created_at", { ascending: false })
+          : Promise.resolve({ data: [] }),
       ]);
 
       const attendeeNotifs: Notification[] = (attendeeRes.data ?? []).map((r: any) => ({
@@ -68,7 +75,11 @@ export default function Notifications() {
       );
 
       setNotifications(all);
-      setLoading(false);
+      } catch (e) {
+        console.error("fetchNotifications error:", e);
+      } finally {
+        setLoading(false);
+      }
     }
 
     fetchNotifications();

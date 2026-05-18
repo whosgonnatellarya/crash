@@ -23,18 +23,26 @@ export async function getPublicUser() {
     .eq('email', user.email)
     .single();
 
-  if (data) return data;
+  if (data) {
+    // if the id doesn't match auth (old account), fix it silently
+    if (data.id !== user.id) {
+      await supabase.from('users').update({ id: user.id }).eq('email', user.email);
+      data.id = user.id;
+    }
+    return data;
+  }
 
-  // no row yet — create one from auth metadata (handles accounts created before signup fix)
+  // no row at all — create one
   const meta = user.user_metadata ?? {};
   const { data: newUser } = await supabase
     .from('users')
-    .insert({
+    .upsert({
+      id: user.id,
       name: meta.name ?? '',
       email: user.email,
       university: meta.university ?? '',
       graduation_year: meta.graduation_year ?? null,
-    })
+    }, { onConflict: 'email' })
     .select()
     .single();
 

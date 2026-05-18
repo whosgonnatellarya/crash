@@ -11,21 +11,32 @@ export default function HostDashboard() {
   }, []);
 
   async function fetchRequests() {
-    const user = await getPublicUser();
-    if (!user) {
+    try {
+      const user = await getPublicUser();
+      if (!user) return;
+
+      const { data: myParties } = await supabase
+        .from("parties")
+        .select("id, name")
+        .eq("host_id", user.id);
+
+      if (!myParties || myParties.length === 0) return;
+
+      const partyIds = myParties.map((p: any) => p.id);
+
+      const { data, error } = await supabase
+        .from("requests")
+        .select("id, status, party_id, user_id, users(name, university, graduation_year), parties(name)")
+        .in("party_id", partyIds)
+        .eq("status", "pending");
+
+      if (error) Alert.alert("error", error.message);
+      else setRequests(data ?? []);
+    } catch (e) {
+      console.error("fetchRequests error:", e);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { data, error } = await supabase
-      .from("requests")
-      .select("id, status, party_id, user_id, users(name, university, graduation_year), parties!inner(name, host_id)")
-      .eq("parties.host_id", user.id)
-      .eq("status", "pending");
-
-    if (error) Alert.alert("error", error.message);
-    else setRequests(data ?? []);
-    setLoading(false);
   }
 
   async function updateStatus(requestId: string, status: "approved" | "denied") {

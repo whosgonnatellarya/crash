@@ -12,6 +12,11 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
 
   async function handleSignup() {
+    if (!name || !email || !password || !university || !year) {
+      alert("please fill in all fields.");
+      return;
+    }
+
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) {
@@ -20,12 +25,13 @@ export default function Signup() {
       return;
     }
 
-    const { error: insertError } = await supabase.from("users").insert({
+    const { error: insertError } = await supabase.from("users").upsert({
+      id: data.user?.id,
       name,
       email,
       university,
       graduation_year: year,
-    });
+    }, { onConflict: 'id' });
 
     if (insertError) {
       alert(insertError.message);

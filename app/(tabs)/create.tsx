@@ -1,5 +1,6 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { getPublicUser, supabase } from "@/lib/supabase";
+import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -58,6 +59,19 @@ export default function CreateParty() {
       return;
     }
 
+    let latitude: number | null = null;
+    let longitude: number | null = null;
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        const results = await Location.geocodeAsync(location);
+        if (results.length > 0) {
+          latitude = results[0].latitude;
+          longitude = results[0].longitude;
+        }
+      }
+    } catch (_) {}
+
     const { error } = await supabase.from("parties").insert({
       name,
       date_time: date.toISOString(),
@@ -68,6 +82,8 @@ export default function CreateParty() {
       is_paid: isPaid,
       price: isPaid ? parseFloat(price) || null : null,
       host_id: user.id,
+      latitude,
+      longitude,
     });
 
     setLoading(false);
