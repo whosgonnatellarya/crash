@@ -1,7 +1,8 @@
 import { getPublicUser, supabase } from "@/lib/supabase";
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
@@ -9,29 +10,31 @@ export default function Profile() {
   const [hostedCount, setHostedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchProfile() {
-      try {
-        const user = await getPublicUser();
-        if (!user) return;
+  useFocusEffect(
+    useCallback(() => {
+      async function fetchProfile() {
+        try {
+          const user = await getPublicUser();
+          if (!user) return;
 
-        const [attendedRes, hostedRes] = await Promise.all([
-          supabase.from("requests").select("id", { count: "exact" }).eq("user_id", user.id).eq("status", "approved"),
-          supabase.from("parties").select("id", { count: "exact" }).eq("host_id", user.id),
-        ]);
+          const [attendedRes, hostedRes] = await Promise.all([
+            supabase.from("requests").select("id", { count: "exact" }).eq("user_id", user.id).eq("status", "approved"),
+            supabase.from("parties").select("id", { count: "exact" }).eq("host_id", user.id),
+          ]);
 
-        setProfile(user);
-        setAttendedCount(attendedRes.count ?? 0);
-        setHostedCount(hostedRes.count ?? 0);
-      } catch (e) {
-        console.error("fetchProfile error:", e);
-      } finally {
-        setLoading(false);
+          setProfile(user);
+          setAttendedCount(attendedRes.count ?? 0);
+          setHostedCount(hostedRes.count ?? 0);
+        } catch (e) {
+          console.error("fetchProfile error:", e);
+        } finally {
+          setLoading(false);
+        }
       }
-    }
 
-    fetchProfile();
-  }, []);
+      fetchProfile();
+    }, [])
+  );
 
   if (loading) {
     return (
@@ -44,7 +47,14 @@ export default function Profile() {
   return (
     <ScrollView style={{ padding: 24 }}>
       <View style={{ flexDirection: "row", alignItems: "center", marginTop: 60, marginBottom: 24 }}>
-        <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: "#ccc", marginRight: 16 }} />
+        {profile?.profile_pic ? (
+          <Image
+            source={{ uri: profile.profile_pic }}
+            style={{ width: 80, height: 80, borderRadius: 40, marginRight: 16 }}
+          />
+        ) : (
+          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: "#ccc", marginRight: 16 }} />
+        )}
         <View>
           <Text style={{ fontSize: 20, fontWeight: "bold" }}>{profile?.name ?? "—"}</Text>
           <Text style={{ color: "gray" }}>
@@ -67,10 +77,23 @@ export default function Profile() {
 
       <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8 }}>upcoming parties</Text>
 
+      <TouchableOpacity
+        style={{
+          marginTop: 16,
+          padding: 16,
+          backgroundColor: "#f0f0f0",
+          borderRadius: 12,
+          alignItems: "center",
+        }}
+        onPress={() => router.push("/edit-profile")}
+      >
+        <Text style={{ fontWeight: "bold" }}>edit profile</Text>
+      </TouchableOpacity>
+
       {hostedCount > 0 && (
         <TouchableOpacity
           style={{
-            marginTop: 16,
+            marginTop: 12,
             padding: 16,
             backgroundColor: "#000",
             borderRadius: 12,

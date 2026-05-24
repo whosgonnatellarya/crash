@@ -51,6 +51,8 @@ export default function RootLayout() {
         <Stack.Screen name="groupchat" options={{ headerShown: false }} />
         <Stack.Screen name="waitlist" options={{ headerShown: false }} />
         <Stack.Screen name="qrcode" options={{ headerShown: false }} />
+        <Stack.Screen name="map" options={{ headerShown: false }} />
+        <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

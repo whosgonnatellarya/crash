@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 const STATUS_COLOR: Record<string, string> = {
   approved: '#22c55e',
@@ -14,6 +14,7 @@ export default function Waitlist() {
   const [party, setParty] = useState<any>(null);
   const [request, setRequest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -83,11 +84,37 @@ export default function Waitlist() {
           >
             <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>view your ticket</Text>
           </TouchableOpacity>
-        ) : (
-          <Text style={{ color: 'gray', marginTop: 24, textAlign: 'center' }}>
-            {status === 'pending' ? "hang tight — the host will review your request soon." : null}
-          </Text>
-        )}
+        ) : status === 'pending' ? (
+          <>
+            <Text style={{ color: 'gray', marginTop: 24, textAlign: 'center' }}>
+              hang tight — the host will review your request soon.
+            </Text>
+            <TouchableOpacity
+              style={{ marginTop: 16, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#ff3b30', alignItems: 'center', marginBottom: 40, opacity: cancelling ? 0.6 : 1 }}
+              disabled={cancelling}
+              onPress={() =>
+                Alert.alert('cancel request', 'are you sure you want to withdraw your request?', [
+                  { text: 'keep it', style: 'cancel' },
+                  {
+                    text: 'cancel request',
+                    style: 'destructive',
+                    onPress: async () => {
+                      setCancelling(true);
+                      const { error } = await supabase.from('requests').delete().eq('id', requestId);
+                      setCancelling(false);
+                      if (error) { Alert.alert('error', error.message); return; }
+                      router.back();
+                    },
+                  },
+                ])
+              }
+            >
+              <Text style={{ color: '#ff3b30', fontWeight: 'bold', fontSize: 16 }}>
+                {cancelling ? 'cancelling...' : 'cancel request'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : null}
       </View>
     </ScrollView>
   );

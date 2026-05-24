@@ -8,6 +8,7 @@ export default function PartyDetails() {
   const [party, setParty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [isHost, setIsHost] = useState(false);
   const [userRequest, setUserRequest] = useState<any>(null);
 
@@ -38,6 +39,30 @@ export default function PartyDetails() {
     }
     load();
   }, [id]);
+
+  function handleDeleteParty() {
+    Alert.alert(
+      'delete party',
+      'this will permanently delete the party and all its requests. are you sure?',
+      [
+        { text: 'cancel', style: 'cancel' },
+        {
+          text: 'delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            const { error } = await supabase.from('parties').delete().eq('id', id);
+            setDeleting(false);
+            if (error) {
+              Alert.alert('error', error.message);
+            } else {
+              router.replace('/(tabs)');
+            }
+          },
+        },
+      ]
+    );
+  }
 
   async function handleRequestJoin() {
     setRequesting(true);
@@ -135,10 +160,19 @@ export default function PartyDetails() {
                 <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>manage party</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ marginTop: 12, padding: 16, backgroundColor: '#222', borderRadius: 12, alignItems: 'center', marginBottom: 40 }}
+                style={{ marginTop: 12, padding: 16, backgroundColor: '#222', borderRadius: 12, alignItems: 'center' }}
                 onPress={() => router.push(chatUrl as any)}
               >
                 <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>group chat</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ marginTop: 12, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#ff3b30', alignItems: 'center', marginBottom: 40, opacity: deleting ? 0.6 : 1 }}
+                onPress={handleDeleteParty}
+                disabled={deleting}
+              >
+                <Text style={{ color: '#ff3b30', fontWeight: 'bold', fontSize: 16 }}>
+                  {deleting ? 'deleting...' : 'delete party'}
+                </Text>
               </TouchableOpacity>
             </>
           ) : userRequest?.status === 'approved' ? (

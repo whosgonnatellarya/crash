@@ -1,5 +1,5 @@
 import { getPublicUser, supabase } from "@/lib/supabase";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -50,7 +50,9 @@ export default function GroupChat() {
             .select("id, content, created_at, user_id, users(name)")
             .eq("id", payload.new.id)
             .single();
-          if (data) setMessages((prev) => [...prev, data]);
+          if (data) setMessages((prev) =>
+            prev.some((m) => m.id === data.id) ? prev : [...prev, data]
+          );
         }
       )
       .subscribe();
@@ -69,13 +71,19 @@ export default function GroupChat() {
     if (!trimmed || !currentUserId) return;
     setText("");
 
-    const { error } = await supabase.from("messages").insert({
-      party_id: party_id,
-      user_id: currentUserId,
-      content: trimmed,
-    });
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({ party_id, user_id: currentUserId, content: trimmed })
+      .select("id, content, created_at, user_id, users(name)")
+      .single();
 
-    if (error) Alert.alert("error", error.message);
+    if (error) {
+      Alert.alert("error", error.message);
+      setText(trimmed);
+      return;
+    }
+
+    if (data) setMessages((prev) => [...prev, data]);
   }
 
   if (loading) {
@@ -97,7 +105,10 @@ export default function GroupChat() {
         style={{ flex: 1, padding: 16 }}
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
       >
-        <Text style={{ fontSize: 24, fontWeight: "bold", marginTop: 60, marginBottom: 16 }}>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 60, marginBottom: 8 }}>
+          <Text style={{ fontSize: 16 }}>← back</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 24, fontWeight: "bold", marginBottom: 16 }}>
           {party_name ?? "group chat"}
         </Text>
 
