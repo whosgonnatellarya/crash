@@ -19,22 +19,57 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState<"hot" | "tonight">("hot");
   const [parties, setParties] = useState<any[]>([]);
 
+  function sortByHotRank(a: any, b: any) {
+    const popularityDiff = (b.popularity ?? 0) - (a.popularity ?? 0);
+    if (popularityDiff !== 0) return popularityDiff;
+
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  }
+
   useFocusEffect(
     useCallback(() => {
-      supabase
-        .from("parties")
-        .select("*, users!host_id(name)")
-        .order("created_at", { ascending: false })
-        .then(({ data, error }) => {
-          if (!error) setParties(data ?? []);
+      let isActive = true;
+
+      async function fetchFeed() {
+        const [partiesRes, requestsRes] = await Promise.all([
+          supabase
+            .from("parties")
+            .select("*, users!host_id(name)")
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("requests")
+            .select("party_id")
+            .eq("status", "approved"),
+        ]);
+
+        if (!isActive || partiesRes.error) return;
+
+        const popularityByPartyId = new Map<string, number>();
+        (requestsRes.data ?? []).forEach((request) => {
+          const partyId = String(request.party_id);
+          popularityByPartyId.set(partyId, (popularityByPartyId.get(partyId) ?? 0) + 1);
         });
+
+        setParties(
+          (partiesRes.data ?? []).map((party) => ({
+            ...party,
+            popularity: popularityByPartyId.get(String(party.id)) ?? 0,
+          }))
+        );
+      }
+
+      fetchFeed();
+
+      return () => {
+        isActive = false;
+      };
     }, [])
   );
 
   const visibleParties =
-    activeTab === "tonight"
-      ? parties.filter((p) => isTonight(p.date_time))
-      : parties;
+    activeTab === "hot"
+      ? [...parties].sort(sortByHotRank)
+      : parties.filter((p) => isTonight(p.date_time));
 
   return (
     <View style={{ flex: 1 }}>
